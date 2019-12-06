@@ -17,6 +17,6 @@ def multiply(x,y):
 
 def devide(x,y):
     '''Division function'''
-    if y == 0;
+    if y == 0:
         raise ValueError('Can not devide by zero!')
     return x / y
