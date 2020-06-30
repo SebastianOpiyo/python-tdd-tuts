@@ -1,8 +1,8 @@
 #!/bin/python3
-# Author: Ahmed Raouf
+# Author: Sebastian Opiyo
 # Date Created: May 29, 2020
 # Date Modified: June 17, 2020
-# Description:
+# Description: Learning OOP by use of the capstone project.
 """ 
 This program asks for the user's name, welcomes them to the project,
 and then provides a selection menu for a user to choose from.
@@ -96,7 +96,6 @@ class DataSet(object):
 
     def load_default_data(self):
         self._data = self.load_file()
-        print(len(self._data))
         self._initialize_sets()
 
     @staticmethod
@@ -213,7 +212,7 @@ class DataSet(object):
                 print(f"- {label}")
             print(f"                    Minimum             Average             Maximum ")
 
-            for descriptor in self._labels[rows]:
+            for descriptor in DataSet.bubble_sort(self._labels[rows]):
                 min_value, avg_value, max_value = \
                     self._table_statistics(rows, descriptor)
                 print(f"{descriptor:20}", end="")
