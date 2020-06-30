@@ -10,6 +10,7 @@ and then provides a selection menu for a user to choose from.
 
 # Imports
 from enum import Enum
+import csv
 
 
 conversions = {
@@ -72,8 +73,9 @@ class DataSet(object):
             else:
                 raise ValueError
         except ValueError:
-            print('This Header "{}" is too long, not valid.\n Header must be a string less than 30 '
-                  'characters long.'.format(new_header))
+            pass
+            # print('This Header "{}" is too long, not valid.\n Header must be a string less than 30 '
+            #       'characters long.'.format(new_header))
 
     def _cross_table_statistics(self, descriptor_one: str, descriptor_two: str):
         """ Given a label from each category, calculate summary
@@ -92,18 +94,37 @@ class DataSet(object):
             return None, None, None
         return min(value_list), sum(value_list) / len(value_list), max(value_list)
 
-    def load_default_data(self) -> object:
-        self._data = [("Staten Island", "Private room", 70),
-                      ("Brooklyn", "Private room", 50), ("Bronx", "Private room", 40),
-                      ("Brooklyn", "Entire home/apt", 150), ("Manhattan", "Private room", 125),
-                      ("Manhattan", "Entire home/apt", 196), ("Brooklyn", "Private room", 110),
-                      ("Manhattan", "Entire home/apt", 170), ("Manhattan", "Entire home/apt", 165),
-                      ("Manhattan", "Entire home/apt", 150), ("Manhattan", "Entire home/apt", 100),
-                      ("Brooklyn", "Private room", 65), ("Queens", "Entire home/apt", 350),
-                      ("Manhattan", "Private room", 99), ("Brooklyn", "Entire home/apt", 200),
-                      ("Brooklyn", "Entire home/apt", 150), ("Brooklyn", "Private room", 99),
-                      ("Brooklyn", "Private room", 120)]
+    def load_default_data(self):
+        self._data = self.load_file()
+        print(len(self._data))
         self._initialize_sets()
+
+    @staticmethod
+    def load_file():
+        """Load all the data from AB_NYC_2019.csv file into self._data"""
+        with open('AB_NYC_2019.csv', 'r') as csv_file:
+            csv_reader = csv.reader(csv_file)
+            return_list = []
+            next(csv_reader)
+            for line in csv_reader:
+                item = line[1], line[2], int(line[3])
+                return_list.append(item)
+            return return_list
+
+    @staticmethod
+    def bubble_sort(list_to_sort: list):
+        """By use of bubble sort and recursion, the static function
+        orders the labels alphabetically in ascending order."""
+        count = 0
+        array = list_to_sort[:]
+        for idx in range(len(array) - 1):
+            if array[idx] > array[idx + 1]:
+                array[idx], array[idx + 1] = array[idx + 1], array[idx]
+                count += 1
+        if count == 0:
+            return array
+        else:
+            return DataSet.bubble_sort(array)
 
     def _initialize_sets(self):
         """Examine the category labels in self._data and create a set for each category
@@ -123,14 +144,14 @@ class DataSet(object):
         try:
             if not self._data:
                 raise DataSet.EmptyDatasetError
-            property_labels = list(self._labels[DataSet.Categories.PROPERTY_TYPE])
-            location_labels = list(self._labels[DataSet.Categories.LOCATION])
+            property_labels = DataSet.bubble_sort(list(self._labels[DataSet.Categories.PROPERTY_TYPE]))
+            location_labels = DataSet.bubble_sort(list(self._labels[DataSet.Categories.LOCATION]))
             print(f"                ", end="")
             for item in property_labels:
                 print(f"{item:20}", end="")
             print()
             for item_one in location_labels:
-                print(f"{item_one:15}", end="")
+                print(f" {item_one:15}", end="")
                 for item_two in property_labels:
                     value = self._cross_table_statistics(item_one,
                                                          item_two)[stat.value]
@@ -142,75 +163,66 @@ class DataSet(object):
         except DataSet.EmptyDatasetError:
             print("Please Add a data set first!")
 
-    def _table_statics(self, row_category: Categories, label: str):
-        """Given a category from Categories Enum, and string matching one of the items
-        in the category, calculate the Min, Max, and Avg rent for properties in that category
-        with filtered values."""
+    def _alternate_category_type(self, first_category_type):
+        """ Given one of the two Category Enum entries, return the
+        other one.
+        """
+        if first_category_type is self.Categories.LOCATION:
+            second_category_type = self.Categories.PROPERTY_TYPE
+        else:
+            second_category_type = self.Categories.LOCATION
+        return second_category_type
+
+    def _table_statistics(self, row_category: Categories, descriptor: str):
+        """ Given a category and a label from that category, calculate
+        summary statistics for the rows that match that label.
+        Include only rows where the alternate category's label is
+        active.
+        Keyword arguments:
+        row_category -- a category from the Categories Enum
+        descriptor -- a label from row_category
+        Returns a tuple of min, average, max from the matching rows.
+        """
         try:
             if not self._data:
                 raise DataSet.EmptyDatasetError
-            result = []
-            property_labels = list(self._labels[DataSet.Categories.PROPERTY_TYPE])
-            location_labels = list(self._labels[DataSet.Categories.LOCATION])
-            labels = [property_labels[:] if item in location_labels else location_labels[:]
-                      for item in self.get_active_labels(row_category)]
-            for elem in labels[0]:
-                min_max_avg = [item[2] for item in self._data if
-                               all(x in item for x in [label, elem])
-                               and label in self.get_active_labels(row_category)]
-                if len(min_max_avg) == 0:
-                    result.append([elem, 0, 0, 0])
-                else:
-                    result.append([elem, min(min_max_avg), max(min_max_avg), sum(min_max_avg)/len(min_max_avg)])
-            return result
+            detail_category = self._alternate_category_type(row_category)
+            value_list = [item[2] for item in self._data if
+                          item[row_category.value] == descriptor and
+                          item[detail_category.value] in
+                          self._active_labels[detail_category]]
+            if len(value_list) == 0:
+                return None, None, None
+            return min(value_list), sum(value_list) / len(value_list), \
+                max(value_list)
         except DataSet.EmptyDatasetError:
             print("Please Add a data set first!")
 
     def display_field_table(self, rows: Categories):
-        """Displays a table of Min, Max and Average depending on
-        Categories value passed. Utilizes filtered out data and
-        _table_statistics to print out active labels and data."""
+        """ Given a category, display one row for each label in that
+        category with min, avg, max displayed for each row.
+        Include only rows where the alternate category's label is active
+        """
         try:
             if not self._data:
                 raise DataSet.EmptyDatasetError
-            print("The following data are from properties matching these criteria:")
-            for item in self.get_active_labels(rows):
-                print(f'- {item}')
+            detail_category = self._alternate_category_type(rows)
+            print("The following data are from properties "
+                  "matching these criteria:")
+            for label in self.get_active_labels(detail_category):
+                print(f"- {label}")
+            print(f"                    Minimum             Average             Maximum ")
 
-            print(f'{"":20} Minimum {"":<12} Average {"":<12} Maximum ')
-            property_labels = list(self._labels[DataSet.Categories.PROPERTY_TYPE])
-            location_labels = list(self._labels[DataSet.Categories.LOCATION])
-            labels = [property_labels[:] if item in location_labels else location_labels[:]
-                      for item in self.get_active_labels(rows)]
-            data = []
-            for item in self.get_active_labels(rows):
-                val = self._table_statics(rows, item)
-                data.append(val)
-            minimum = []
-            maximum = []
-            avg = []
-            for items in data:
-                for values in items:
-                    if len(items):
-                        minimum.append(values[1],)
-                        maximum.append(values[2],)
-                        avg.append(values[3],)
-            # print(minimum)
-            # print(maximum)
-            # print(avg)
-            pos_counter = len(labels[0]) * 2
-            min_val = minimum[-pos_counter] + minimum[-(pos_counter // 2)]
-            max_val = maximum[-pos_counter] + maximum[-(pos_counter // 2)]
-            avg_val = avg[-pos_counter] + avg[-(pos_counter // 2)]
-            while pos_counter is len(labels[0]*2):  # need a revisit!
-                for label in labels[0]:
-                    try:
-                        print(f'{label:20} $ {min_val:<18.2f} $ {avg_val:<18.2f} $ {max_val:<18.2f}')
-                    except TypeError:
-                        print(f'{label:20} $ {"N/A":<18} $ {"N/A":<18} $ {"N/A":<18}')
-                pos_counter -= 1
-                break
-            print()
+            for descriptor in self._labels[rows]:
+                min_value, avg_value, max_value = \
+                    self._table_statistics(rows, descriptor)
+                print(f"{descriptor:20}", end="")
+                if min_value is None:
+                    print(f"{'N/A':20}{'N/A':20}{'N/A':20}", end="")
+                else:
+                    print(f"$ {min_value:<18.2f}$ {avg_value:<18.2f}$ "
+                          f"{max_value:<18.2f}", end="")
+                print()
         except DataSet.EmptyDatasetError:
             print("Please Add a data set first!")
 
@@ -366,7 +378,7 @@ def currency_options(base_curr="EUR"):
         print()
 
 
-def main() -> object:
+def main():
     """ Obtain the user's name, welcome them to the project, and then
     call the menu function to display a selection menu for the user
     to choose from.
