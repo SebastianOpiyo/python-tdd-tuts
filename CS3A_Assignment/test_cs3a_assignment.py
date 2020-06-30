@@ -9,58 +9,70 @@ class TestStringMethods(unittest.TestCase):
 
     def setUp(self):
         self._dataset = dataset()
-        self._data = [("Staten Island", "Private room", 70), 
-        ("Brooklyn", "Private room", 50)]
+        self._data = self._dataset.load_default_data
+
+    """
+    ********************************************
+    * Tests for Data loading from the CSV file.*
+    ********************************************
+    """
+    def test_data_file_loading(self):
+        self.assertEqual(len(self._dataset.load_file()), 48895,
+                         msg="The length of the data is not correct!")
 
     """
     ******************************************************
     * Tests for Getter & Setter Handling Begin from here.*
     ******************************************************
     """
-    # Test for getter
+
     def test_fail_if_no_header_argument(self):
+        """Test for getter"""
         result = self._dataset.header
         self.assertFalse(result)
-    
-    # Test for getter
+
     def test_pass_if_correct_header_argument(self):
+        """ Test for getter"""
         header_data = 'Sebastian'
         self._dataset.header = header_data
         result = self._dataset.header
         self.assertTrue(result)
 
-    # Test for getter 
     def test_fail_if_invalid_header_argument(self):
+        """Test for getter """
         header_data = 'Sebastiankskkskskskkskskskskkskskskskskskksks'
         with self.assertRaises(ValueError):
             self._dataset.header = header_data
             result = self._dataset.header
             self.assertFalse(result)
 
-    # Test for setter
     def test_pass_if_correct_header(self):
+        """Test for setter"""
         header_data = 'Sebastian'
         self._dataset.header = header_data
         result = self._dataset.header
         self.assertTrue(result)
 
-    # Test for setter
     def test_fail_if_incorrect_header_argument(self):
+        """Test for setter"""
         header_data = 'Sebastiankskkskskskkskskskskkskskskskskskksks'
         with self.assertRaises(ValueError):
             self._dataset.header = header_data
             result = self._dataset.header
-            self.assertFalse(result)
+            self.assertTrue(result)
 
     """
     *******************************************
     * Tests for Data Handling Begin from here.*
     *******************************************
     """
-    # Test _cross_table_statistics
     def test_raise_empty_dataset_error(self):
+        """Test _cross_table_statistics --
+        The method load_default_data() has been refactored. All it does
+        is call other methods.
+        """
         result = True
-        if self._dataset.load_default_data() is None:
+        if self._dataset.load_default_data():
             result = None
             self.assertFalse(result)
         self.assertTrue(result)
